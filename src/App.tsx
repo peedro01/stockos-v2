@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { AuthProvider } from './contexts/auth.context'
 import { useAuthStore } from './store/auth.store'
 import { AppLayout } from './layouts/AppLayout'
@@ -53,6 +54,7 @@ export default function App() {
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
+      <SpeedInsights />
     </AuthProvider>
   )
 }
