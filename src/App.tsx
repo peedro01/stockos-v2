@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/auth.context'
 import { useAuthStore } from './store/auth.store'
+import { useUIStore } from './store/ui.store'
 import { AppLayout } from './layouts/AppLayout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -28,31 +30,38 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const { theme } = useUIStore()
+
+  useEffect(() => {
+    const root = document.documentElement
+    root.classList.remove('dark', 'light')
+    root.classList.add(theme)
+  }, [theme])
+
+  return <>{children}</>
+}
+
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="products" element={<Products />} />
-          <Route path="movements" element={<Movements />} />
-          <Route path="suppliers" element={<Suppliers />} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="alerts" element={<Alerts />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+      <ThemeProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="products" element={<Products />} />
+            <Route path="movements" element={<Movements />} />
+            <Route path="suppliers" element={<Suppliers />} />
+            <Route path="customers" element={<Customers />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="alerts" element={<Alerts />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </ThemeProvider>
     </AuthProvider>
   )
 }

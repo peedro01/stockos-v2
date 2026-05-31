@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Users, Building2, Bell, Shield, Database, Plus, Pencil, Trash2 } from 'lucide-react'
+import { Users, Building2, Bell, Shield, Database, Plus, Pencil, Trash2, Sun, Moon, Palette } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { mockUsers } from '@/lib/mock-data'
+import { useUIStore } from '@/store/ui.store'
 import { getInitials, cn } from '@/lib/utils'
 
 const roleLabels = { admin: 'Admin', gerente: 'Gerente', operador: 'Operador' }
@@ -24,6 +25,7 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 export default function Settings() {
+  const { theme, setTheme } = useUIStore()
   const [notifications, setNotifications] = useState({
     lowStock: true, outOfStock: true, suspicious: false, weeklyReport: true, expiryWarning: true,
   })
@@ -37,6 +39,43 @@ export default function Settings() {
 
   return (
     <div className="p-3 sm:p-5 space-y-4 sm:space-y-5 max-w-3xl animate-fade-in">
+
+      {/* Aparência */}
+      <Card>
+        <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+          <Palette className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">Aparência</h2>
+        </div>
+        <div className="p-4">
+          <p className="text-xs text-muted-foreground mb-3">Escolha o tema da interface</p>
+          <div className="grid grid-cols-2 gap-3 max-w-sm">
+            <button
+              onClick={() => setTheme('dark')}
+              className={cn(
+                'flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all',
+                theme === 'dark' ? 'border-primary bg-primary/10' : 'border-border hover:border-border/80'
+              )}>
+              <div className="flex h-10 w-full rounded-lg bg-zinc-900 border border-zinc-700 items-center justify-center">
+                <Moon className="h-4 w-4 text-zinc-300" />
+              </div>
+              <span className="text-xs font-semibold">Escuro</span>
+              {theme === 'dark' && <span className="text-[10px] text-primary font-semibold">● Ativo</span>}
+            </button>
+            <button
+              onClick={() => setTheme('light')}
+              className={cn(
+                'flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all',
+                theme === 'light' ? 'border-primary bg-primary/10' : 'border-border hover:border-border/80'
+              )}>
+              <div className="flex h-10 w-full rounded-lg bg-gray-100 border border-gray-200 items-center justify-center">
+                <Sun className="h-4 w-4 text-amber-500" />
+              </div>
+              <span className="text-xs font-semibold">Claro</span>
+              {theme === 'light' && <span className="text-[10px] text-primary font-semibold">● Ativo</span>}
+            </button>
+          </div>
+        </div>
+      </Card>
 
       {/* Notifications */}
       <Card>

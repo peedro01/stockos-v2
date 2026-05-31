@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  /* ── DARK MODE (padrão) ── */
+  :root,
+  .dark {
     --background: 222 47% 6%;
     --foreground: 210 40% 94%;
     --card: 222 47% 8%;
@@ -24,36 +26,45 @@
     --input: 222 47% 14%;
     --ring: 239 84% 67%;
     --radius: 0.5rem;
-    --sidebar-width: 220px;
   }
 
-  * {
-    @apply border-border;
+  /* ── LIGHT MODE ── */
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 239 84% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 94%;
+    --secondary-foreground: 222 47% 20%;
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 14% 46%;
+    --accent: 239 84% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 88%;
+    --input: 220 14% 88%;
+    --ring: 239 84% 60%;
   }
+
+  * { @apply border-border; }
 
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    transition: background-color 0.2s, color 0.2s;
   }
 
-  ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 4px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.4);
-  }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.4); }
 }
 
 @layer utilities {
-  .animate-fade-in {
-    animation: fade-in 0.3s ease-out;
-  }
+  .animate-fade-in { animation: fade-in 0.3s ease-out; }
 }
