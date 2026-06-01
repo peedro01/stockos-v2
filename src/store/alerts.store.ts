@@ -5,15 +5,25 @@ import type { StockAlert } from '@/types'
 interface AlertsState {
   alerts: StockAlert[]
   markRead: (id: string) => void
-  markAllRead: () => void
   dismiss: (id: string) => void
+  markAllRead: () => void
+  clearAll: () => void
   unreadCount: () => number
 }
 
 export const useAlertsStore = create<AlertsState>()((set, get) => ({
   alerts: mockAlerts,
-  markRead: (id) => set(s => ({ alerts: s.alerts.map(a => a.id === id ? { ...a, is_read: true } : a) })),
-  markAllRead: () => set(s => ({ alerts: s.alerts.map(a => ({ ...a, is_read: true })) })),
-  dismiss: (id) => set(s => ({ alerts: s.alerts.filter(a => a.id !== id) })),
+
+  markRead: (id) =>
+    set(s => ({ alerts: s.alerts.map(a => a.id === id ? { ...a, is_read: true } : a) })),
+
+  dismiss: (id) =>
+    set(s => ({ alerts: s.alerts.filter(a => a.id !== id) })),
+
+  markAllRead: () =>
+    set(s => ({ alerts: s.alerts.map(a => ({ ...a, is_read: true })) })),
+
+  clearAll: () => set({ alerts: [] }),
+
   unreadCount: () => get().alerts.filter(a => !a.is_read).length,
 }))

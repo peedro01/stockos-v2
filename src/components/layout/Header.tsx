@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Search, Bell, HelpCircle, Menu, Sun, Moon } from 'lucide-react'
-import { mockAlerts } from '@/lib/mock-data'
+import { cn } from '@/lib/utils'
 import { SearchPalette } from './SearchPalette'
 import { NotificationPanel } from './NotificationPanel'
 import { useUIStore } from '@/store/ui.store'
+import { useAlertsStore } from '@/store/alerts.store'
 
 interface HeaderProps {
   title: string
@@ -15,9 +16,8 @@ export function Header({ title, subtitle, onMenuClick }: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const { theme, toggleTheme } = useUIStore()
-
-  // Count de não lidos — em produção viria do store global
-  const [unreadCount, setUnreadCount] = useState(mockAlerts.filter(a => !a.is_read).length)
+  const { unreadCount, markAllRead } = useAlertsStore()
+  const unread = unreadCount()
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -35,23 +35,19 @@ export function Header({ title, subtitle, onMenuClick }: HeaderProps) {
   }, [])
 
   function handleNotifOpen() {
-    setNotifOpen(v => !v)
-    // Zera badge ao abrir
-    if (!notifOpen) setUnreadCount(0)
+    const opening = !notifOpen
+    setNotifOpen(opening)
+    if (opening) markAllRead()
   }
 
   return (
     <>
       <header className="flex h-[52px] items-center gap-2 border-b border-border bg-card px-3 sm:px-5 flex-shrink-0 relative z-30">
-        {/* Mobile hamburger */}
-        <button
-          onClick={onMenuClick}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground hover:text-foreground lg:hidden flex-shrink-0"
-        >
+        <button onClick={onMenuClick}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground hover:text-foreground lg:hidden flex-shrink-0">
           <Menu className="h-4 w-4" />
         </button>
 
-        {/* Title */}
         <div className="flex items-center gap-2 min-w-0">
           <h1 className="text-[14px] sm:text-[15px] font-semibold tracking-tight truncate">{title}</h1>
           {subtitle && (
@@ -62,45 +58,33 @@ export function Header({ title, subtitle, onMenuClick }: HeaderProps) {
         </div>
 
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-          {/* Search bar — desktop */}
-          <button
-            onClick={() => setSearchOpen(true)}
-            className="hidden md:flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-1.5 w-48 lg:w-64 text-left hover:border-border/80 transition-colors"
-          >
+          <button onClick={() => setSearchOpen(true)}
+            className="hidden md:flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-1.5 w-48 lg:w-64 text-left hover:border-border/80 transition-colors">
             <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
             <span className="flex-1 text-xs text-muted-foreground">Buscar...</span>
             <kbd className="hidden lg:flex items-center gap-0.5 rounded border border-border px-1 py-0.5 text-[9px] text-muted-foreground">⌘K</kbd>
           </button>
 
-          {/* Search icon — mobile */}
-          <button
-            onClick={() => setSearchOpen(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground hover:text-foreground md:hidden"
-          >
+          <button onClick={() => setSearchOpen(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground hover:text-foreground md:hidden">
             <Search className="h-4 w-4" />
           </button>
 
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
+          <button onClick={toggleTheme}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-            title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-          >
+            title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}>
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
 
-          {/* Notifications */}
-          <button
-            onClick={handleNotifOpen}
+          <button onClick={handleNotifOpen}
             className={cn(
               'relative flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-secondary text-muted-foreground hover:text-foreground transition-colors',
               notifOpen && 'border-primary/40 bg-primary/10 text-primary'
-            )}
-          >
+            )}>
             <Bell className="h-4 w-4" />
-            {unreadCount > 0 && (
+            {unread > 0 && (
               <span className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center">
-                {unreadCount}
+                {unread}
               </span>
             )}
           </button>
@@ -115,8 +99,4 @@ export function Header({ title, subtitle, onMenuClick }: HeaderProps) {
       <NotificationPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
     </>
   )
-}
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(' ')
 }
