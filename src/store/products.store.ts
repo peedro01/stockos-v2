@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { Product, ProductFilters } from '../types'
 import { mockProducts } from '../lib/mock-data'
 
@@ -24,15 +25,24 @@ const defaultFilters: ProductFilters = {
   perPage: 20,
 }
 
-export const useProductsStore = create<ProductsState>()((set) => ({
-  products: mockProducts,
-  filters: defaultFilters,
-  isLoading: false,
-  setProducts: (products) => set({ products }),
-  setFilters: (filters) => set((s) => ({ filters: { ...s.filters, ...filters, page: 1 } })),
-  setLoading: (isLoading) => set({ isLoading }),
-  addProduct: (product) => set((s) => ({ products: [product, ...s.products] })),
-  updateProduct: (id, updates) =>
-    set((s) => ({ products: s.products.map((p) => (p.id === id ? { ...p, ...updates } : p)) })),
-  deleteProduct: (id) => set((s) => ({ products: s.products.filter((p) => p.id !== id) })),
-}))
+export const useProductsStore = create<ProductsState>()(
+  persist(
+    (set) => ({
+      products: mockProducts,
+      filters: defaultFilters,
+      isLoading: false,
+      setProducts: (products) => set({ products }),
+      setFilters: (filters) => set((s) => ({ filters: { ...s.filters, ...filters, page: 1 } })),
+      setLoading: (isLoading) => set({ isLoading }),
+      addProduct: (product) => set((s) => ({ products: [product, ...s.products] })),
+      updateProduct: (id, updates) =>
+        set((s) => ({ products: s.products.map((p) => (p.id === id ? { ...p, ...updates } : p)) })),
+      deleteProduct: (id) => set((s) => ({ products: s.products.filter((p) => p.id !== id) })),
+    }),
+    {
+      name: 'stockos-products',
+      // Não persiste os filtros de busca — só os dados
+      partialize: (s) => ({ products: s.products }),
+    }
+  )
+)
