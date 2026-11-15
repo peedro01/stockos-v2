@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { productsService } from '@/services/products.service'
 import { mockProducts } from '@/lib/mock-data'
+import { useAuthStore } from '@/store/auth.store'
 import type { Product, ProductFormData, ProductFilters } from '@/types'
 
 const IS_DEMO = !import.meta.env.VITE_SUPABASE_URL ||
@@ -41,7 +42,7 @@ export function useProducts(filters?: Partial<ProductFilters>) {
       setProducts(prev => [novo, ...prev])
       return novo
     }
-    const product = await productsService.create({ ...data, company_id: '1' })
+    const product = await productsService.create({ ...data, company_id: useAuthStore.getState().user?.company_id ?? '00000000-0000-0000-0000-000000000001' })
     setProducts(prev => [product, ...prev])
     return product
   }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { suppliersService } from '@/services/suppliers.service'
 import { mockSuppliers } from '@/lib/mock-data'
+import { useAuthStore } from '@/store/auth.store'
 import type { Supplier, SupplierFormData } from '@/types'
 
 const IS_DEMO = !import.meta.env.VITE_SUPABASE_URL ||
@@ -31,7 +32,7 @@ export function useSuppliers() {
       const novo: Supplier = { ...data, id: Math.random().toString(36).slice(2), company_id: '1', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
       setSuppliers(prev => [novo, ...prev]); return novo
     }
-    const s = await suppliersService.create({ ...data, company_id: '1' })
+    const s = await suppliersService.create({ ...data, company_id: useAuthStore.getState().user?.company_id ?? '00000000-0000-0000-0000-000000000001' })
     setSuppliers(prev => [s, ...prev]); return s
   }
 

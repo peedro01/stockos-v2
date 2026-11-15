@@ -46,7 +46,7 @@ export function useMovements() {
     const movement = await movementsService.create({
       ...data,
       user_id: user?.id ?? '',
-      company_id: '1',
+      company_id: useAuthStore.getState().user?.company_id ?? '00000000-0000-0000-0000-000000000001',
     })
     setMovements(prev => [movement, ...prev])
   }

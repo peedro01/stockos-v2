@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { customersService } from '@/services/customers.service'
 import { mockCustomers } from '@/lib/mock-data'
+import { useAuthStore } from '@/store/auth.store'
 import type { Customer, CustomerFormData } from '@/types'
 
 const IS_DEMO = !import.meta.env.VITE_SUPABASE_URL ||
@@ -31,7 +32,7 @@ export function useCustomers() {
       const novo: Customer = { ...data, id: Math.random().toString(36).slice(2), company_id: '1', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
       setCustomers(prev => [novo, ...prev]); return novo
     }
-    const c = await customersService.create({ ...data, company_id: '1' })
+    const c = await customersService.create({ ...data, company_id: useAuthStore.getState().user?.company_id ?? '00000000-0000-0000-0000-000000000001' })
     setCustomers(prev => [c, ...prev]); return c
   }
 
