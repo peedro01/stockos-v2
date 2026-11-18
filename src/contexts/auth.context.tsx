@@ -42,19 +42,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Verificar sessão existente
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      } else {
-        setLoading(false)
-      }
-    })
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (session?.user) {
+          fetchProfile(session.user.id)
+        } else {
+          setLoading(false)
+        }
+      })
+      .catch(() => setLoading(false))
 
-    // Escutar mudanças de auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Escutar mudanças de auth.
+    // IMPORTANTE: não chamar o supabase de dentro do callback (deadlock do lock de auth).
+    // O INITIAL_SESSION já é tratado pelo getSession acima; o resto é adiado com setTimeout.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') return
       if (session?.user) {
-        await fetchProfile(session.user.id)
-      } else {
+        setTimeout(() => { fetchProfile(session.user.id) }, 0)
+      } else if (event === 'SIGNED_OUT') {
         setUser(null)
       }
     })
@@ -89,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch {
+      setLoading(false)
+    } finally {
       setLoading(false)
     }
   }
