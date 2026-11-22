@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { mockCategories, mockSuppliers } from '@/lib/mock-data'
+import { supabase } from '@/lib/supabase'
 import type { Product, ProductFormData } from '@/types'
 
 const schema = z.object({
@@ -26,6 +27,38 @@ const schema = z.object({
   location: z.string().optional(),
   status: z.enum(['ativo','inativo','descontinuado']),
 })
+
+const IS_DEMO = !import.meta.env.VITE_SUPABASE_URL ||
+  import.meta.env.VITE_SUPABASE_URL.includes('SEU_PROJETO') ||
+  import.meta.env.VITE_SUPABASE_URL.includes('placeholder')
+
+type Option = { id: string; label: string }
+
+// Categorias e fornecedores reais (UUIDs do banco); no modo demo usa o mock
+function useLookups(open: boolean) {
+  const [categories, setCategories] = useState<Option[]>(
+    IS_DEMO ? mockCategories.map(c => ({ id: c.id, label: c.name })) : []
+  )
+  const [suppliers, setSuppliers] = useState<Option[]>(
+    IS_DEMO ? mockSuppliers.map(s => ({ id: s.id, label: s.company_name })) : []
+  )
+
+  useEffect(() => {
+    if (IS_DEMO || !open) return
+    let alive = true
+    Promise.all([
+      supabase.from('categories').select('id, name').order('name'),
+      supabase.from('suppliers').select('id, company_name').order('company_name'),
+    ]).then(([c, s]) => {
+      if (!alive) return
+      setCategories((c.data ?? []).map((x: any) => ({ id: x.id, label: x.name })))
+      setSuppliers((s.data ?? []).map((x: any) => ({ id: x.id, label: x.company_name })))
+    }).catch(() => {})
+    return () => { alive = false }
+  }, [open])
+
+  return { categories, suppliers }
+}
 
 interface ProductModalProps {
   open: boolean
@@ -48,6 +81,7 @@ const Select = ({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectEl
 
 export function ProductModal({ open, onClose, onSave, product }: ProductModalProps) {
   const isEdit = !!product
+  const { categories, suppliers } = useLookups(open)
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
     resolver: zodResolver(schema),
@@ -83,7 +117,7 @@ export function ProductModal({ open, onClose, onSave, product }: ProductModalPro
     } else {
       reset({ unit: 'un', status: 'ativo', cost_price: 0, sale_price: 0, current_stock: 0, min_stock: 0 })
     }
-  }, [product, reset])
+  }, [product, reset, categories.length, suppliers.length])
 
   async function onSubmit(data: ProductFormData) {
     await new Promise(r => setTimeout(r, 400))
@@ -134,13 +168,13 @@ export function ProductModal({ open, onClose, onSave, product }: ProductModalPro
                 <Field label="Categoria">
                   <Select {...register('category_id')}>
                     <option value="">Selecione...</option>
-                    {mockCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                   </Select>
                 </Field>
                 <Field label="Fornecedor">
                   <Select {...register('supplier_id')}>
                     <option value="">Selecione...</option>
-                    {mockSuppliers.map(s => <option key={s.id} value={s.id}>{s.company_name}</option>)}
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </Select>
                 </Field>
                 <Field label="Descrição" error={errors.description?.message}>

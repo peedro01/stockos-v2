@@ -25,7 +25,7 @@ export function useProducts(filters?: Partial<ProductFilters>) {
       }
     } catch (e: any) {
       setError(e.message)
-      setProducts(mockProducts) // fallback
+      if (IS_DEMO) setProducts(mockProducts)
     } finally {
       setIsLoading(false)
     }

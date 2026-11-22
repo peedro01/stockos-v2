@@ -1,6 +1,16 @@
 import { supabase } from '@/lib/supabase'
 import type { Product, ProductFormData, ProductFilters, PaginatedResult } from '@/types'
 
+// Strings vazias viram null (colunas uuid/opcionais não aceitam '')
+function clean<T extends Record<string, any>>(data: T): T {
+  const out: Record<string, any> = { ...data }
+  for (const k of ['category_id', 'supplier_id', 'barcode', 'description', 'brand', 'location']) {
+    if (k in out && (out[k] === '' || out[k] === undefined)) out[k] = null
+  }
+  if ('max_stock' in out && (out.max_stock == null || Number.isNaN(out.max_stock))) out.max_stock = null
+  return out as T
+}
+
 export const productsService = {
   async getAll(filters?: Partial<ProductFilters>): Promise<PaginatedResult<Product>> {
     let query = supabase
@@ -49,7 +59,7 @@ export const productsService = {
   async create(data: ProductFormData & { company_id: string }): Promise<Product> {
     const { data: product, error } = await supabase
       .from('products')
-      .insert(data)
+      .insert(clean(data))
       .select(`*, category:categories(id, name, color), supplier:suppliers(id, company_name)`)
       .single()
 
@@ -60,7 +70,7 @@ export const productsService = {
   async update(id: string, data: Partial<ProductFormData>): Promise<Product> {
     const { data: product, error } = await supabase
       .from('products')
-      .update({ ...data, updated_at: new Date().toISOString() })
+      .update({ ...clean(data), updated_at: new Date().toISOString() })
       .eq('id', id)
       .select(`*, category:categories(id, name, color), supplier:suppliers(id, company_name)`)
       .single()
