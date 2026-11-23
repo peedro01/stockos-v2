@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, forwardRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -75,9 +75,12 @@ const Field = ({ label, error, children }: { label: string; error?: string; chil
   </div>
 )
 
-const Select = ({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => (
-  <select className={cn('flex h-9 w-full rounded-md border border-border bg-secondary px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-ring text-foreground', className)} {...props} />
+const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
+  ({ className, ...props }, ref) => (
+    <select ref={ref} className={cn('flex h-9 w-full rounded-md border border-border bg-secondary px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-ring text-foreground', className)} {...props} />
+  )
 )
+Select.displayName = 'Select'
 
 export function ProductModal({ open, onClose, onSave, product }: ProductModalProps) {
   const isEdit = !!product
