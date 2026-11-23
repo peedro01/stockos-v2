@@ -225,6 +225,66 @@ create trigger trg_stock_movement
   before insert on public.stock_movements
   for each row execute function public.apply_stock_movement();
 
+-- ─── ALERTAS AUTOMÁTICOS DE ESTOQUE ──────────────────────────
+create or replace function public.sync_stock_alerts()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_old text;
+  v_new text;
+begin
+  v_new := case
+    when new.current_stock <= 0 then 'zero'
+    when new.current_stock <= new.min_stock then 'low'
+    else 'ok'
+  end;
+
+  if tg_op = 'UPDATE' then
+    v_old := case
+      when old.current_stock <= 0 then 'zero'
+      when old.current_stock <= old.min_stock then 'low'
+      else 'ok'
+    end;
+    -- só age quando o estado muda (evita alertas repetidos a cada movimentação)
+    if v_old = v_new then
+      return new;
+    end if;
+  elsif v_new = 'zero' and new.min_stock <= 0 then
+    return new;
+  end if;
+
+  delete from public.stock_alerts
+  where product_id = new.id and type in ('out_of_stock', 'low_stock');
+
+  if v_new = 'zero' then
+    insert into public.stock_alerts (type, title, message, severity, product_id, company_id)
+    values (
+      'out_of_stock',
+      'Estoque zerado: ' || new.name,
+      new.name || ' (' || new.sku || ') está sem estoque. Mínimo definido: ' || new.min_stock || ' ' || coalesce(new.unit, 'un') || '.',
+      'danger', new.id, new.company_id
+    );
+  elsif v_new = 'low' then
+    insert into public.stock_alerts (type, title, message, severity, product_id, company_id)
+    values (
+      'low_stock',
+      'Estoque baixo: ' || new.name,
+      new.name || ' (' || new.sku || ') tem ' || new.current_stock || ' ' || coalesce(new.unit, 'un') || ', abaixo do mínimo de ' || new.min_stock || '.',
+      'warning', new.id, new.company_id
+    );
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger trg_products_stock_alerts
+  after insert or update of current_stock, min_stock on public.products
+  for each row execute function public.sync_stock_alerts();
+
 -- ─── ROW LEVEL SECURITY ──────────────────────────────────────
 alter table public.companies       enable row level security;
 alter table public.user_profiles   enable row level security;

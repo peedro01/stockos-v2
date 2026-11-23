@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { movementsService } from '@/services/movements.service'
 import { mockMovements, mockProducts } from '@/lib/mock-data'
 import { useAuthStore } from '@/store/auth.store'
+import { useAlertsStore } from '@/store/alerts.store'
 import type { StockMovement, MovementFormData } from '@/types'
 
 const IS_DEMO = !import.meta.env.VITE_SUPABASE_URL ||
@@ -50,6 +51,8 @@ export function useMovements() {
       company_id: useAuthStore.getState().user?.company_id ?? '00000000-0000-0000-0000-000000000001',
     })
     setMovements(prev => [movement, ...prev])
+    void useAlertsStore.getState().load()
+    return movement
   }
 
   return { movements, isLoading, refetch: fetch, createMovement }

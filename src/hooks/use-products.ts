@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { productsService } from '@/services/products.service'
 import { mockProducts } from '@/lib/mock-data'
 import { useAuthStore } from '@/store/auth.store'
+import { useAlertsStore } from '@/store/alerts.store'
 import type { Product, ProductFormData, ProductFilters } from '@/types'
 
 const IS_DEMO = !import.meta.env.VITE_SUPABASE_URL ||
@@ -44,6 +45,7 @@ export function useProducts(filters?: Partial<ProductFilters>) {
     }
     const product = await productsService.create({ ...data, company_id: useAuthStore.getState().user?.company_id ?? '00000000-0000-0000-0000-000000000001' })
     setProducts(prev => [product, ...prev])
+    void useAlertsStore.getState().load()
     return product
   }
 
@@ -54,6 +56,7 @@ export function useProducts(filters?: Partial<ProductFilters>) {
     }
     const updated = await productsService.update(id, data)
     setProducts(prev => prev.map(p => p.id === id ? updated : p))
+    void useAlertsStore.getState().load()
   }
 
   async function deleteProduct(id: string) {
@@ -63,6 +66,7 @@ export function useProducts(filters?: Partial<ProductFilters>) {
     }
     await productsService.delete(id)
     setProducts(prev => prev.filter(p => p.id !== id))
+    void useAlertsStore.getState().load()
   }
 
   return { products, isLoading, error, refetch: fetch, createProduct, updateProduct, deleteProduct }

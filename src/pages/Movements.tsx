@@ -44,9 +44,8 @@ export default function Movements() {
 
   async function handleSave(data: MovementFormData) {
     try {
-      const created = await createMovement(data)
+      await createMovement(data)
       toast({ title: `✓ ${typeLabels[data.type]} registrada`, description: 'Estoque atualizado', variant: 'success' })
-      return created
     } catch (e: any) {
       toast({ title: 'Erro ao registrar movimentação', description: e?.message ?? 'Tente novamente', variant: 'error' })
       throw e

@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { ToastProvider, ToastViewport, Toast, ToastTitle, ToastDescription, ToastClose } from '@/components/ui/toast'
 import { useToastState } from '@/hooks/use-toast'
+import { useAlertsStore } from '@/store/alerts.store'
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/dashboard': { title: 'Dashboard', subtitle: 'Visão geral' },
@@ -21,6 +22,16 @@ export function AppLayout() {
   const page = pageTitles[location.pathname] ?? { title: 'StockOS', subtitle: '' }
   const { toasts, dismiss } = useToastState()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const loadAlerts = useAlertsStore(s => s.load)
+
+  // Alertas são gerados no banco: carrega ao entrar, ao voltar pra aba e a cada 60s
+  useEffect(() => {
+    loadAlerts()
+    const interval = setInterval(loadAlerts, 60_000)
+    const onFocus = () => { loadAlerts() }
+    window.addEventListener('focus', onFocus)
+    return () => { clearInterval(interval); window.removeEventListener('focus', onFocus) }
+  }, [loadAlerts])
 
   return (
     <ToastProvider>
