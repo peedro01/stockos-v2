@@ -187,14 +187,29 @@ create trigger on_auth_user_created
 -- Update stock on movement
 create or replace function public.apply_stock_movement()
 returns trigger language plpgsql as $$
-declare v_balance integer;
+declare
+  v_stock   integer;
+  v_balance integer;
 begin
+  select current_stock into v_stock
+  from public.products
+  where id = new.product_id
+  for update;
+
+  if v_stock is null then
+    raise exception 'Produto não encontrado';
+  end if;
+
+  if new.type in ('saida', 'perda') and new.quantity > v_stock then
+    raise exception 'Estoque insuficiente: disponível %, solicitado %', v_stock, new.quantity
+      using errcode = 'check_violation';
+  end if;
+
   update public.products set
     current_stock = case
-      when new.type = 'entrada'   then current_stock + new.quantity
-      when new.type = 'saida'     then greatest(current_stock - new.quantity, 0)
-      when new.type = 'perda'     then greatest(current_stock - new.quantity, 0)
-      when new.type in ('ajuste','inventario') then new.quantity
+      when new.type = 'entrada'                 then current_stock + new.quantity
+      when new.type in ('saida', 'perda')       then current_stock - new.quantity
+      when new.type in ('ajuste', 'inventario') then new.quantity
       else current_stock
     end,
     updated_at = now()

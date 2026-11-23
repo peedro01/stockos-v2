@@ -23,8 +23,9 @@ export function useMovements() {
         const data = await movementsService.getAll()
         setMovements(data)
       }
-    } catch {
-      setMovements(mockMovements)
+    } catch (e) {
+      console.error('Erro ao carregar movimentações', e)
+      if (IS_DEMO) setMovements(mockMovements)
     } finally {
       setIsLoading(false)
     }

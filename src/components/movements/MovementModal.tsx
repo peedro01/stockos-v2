@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -7,12 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { mockProducts } from '@/lib/mock-data'
+import { supabase } from '@/lib/supabase'
 import type { MovementFormData, MovementType } from '@/types'
 
 const schema = z.object({
   product_id: z.string().min(1, 'Selecione um produto'),
   type: z.enum(['entrada','saida','ajuste','transferencia','perda','inventario']),
-  quantity: z.coerce.number().min(1, 'Quantidade mínima: 1'),
+  quantity: z.coerce.number().min(0, 'Quantidade inválida'),
   unit_cost: z.coerce.number().optional(),
   reference: z.string().optional(),
   notes: z.string().optional(),
@@ -21,7 +22,7 @@ const schema = z.object({
 interface MovementModalProps {
   open: boolean
   onClose: () => void
-  onSave: (data: MovementFormData) => void
+  onSave: (data: MovementFormData) => void | Promise<void>
   defaultType?: MovementType
 }
 
@@ -46,12 +47,34 @@ const Select = ({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectEl
   <select className={cn('flex h-9 w-full rounded-md border border-border bg-secondary px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-ring text-foreground', className)} {...props} />
 )
 
+const IS_DEMO = !import.meta.env.VITE_SUPABASE_URL ||
+  import.meta.env.VITE_SUPABASE_URL.includes('SEU_PROJETO') ||
+  import.meta.env.VITE_SUPABASE_URL.includes('placeholder')
+
+type ProductOption = { id: string; name: string; unit: string; current_stock: number }
+
+// Produtos reais (UUIDs + saldo atual) carregados a cada abertura do modal; demo usa mock
+function useProductOptions(open: boolean) {
+  const [products, setProducts] = useState<ProductOption[]>(
+    IS_DEMO ? mockProducts.map(p => ({ id: p.id, name: p.name, unit: p.unit, current_stock: p.current_stock })) : []
+  )
+  useEffect(() => {
+    if (IS_DEMO || !open) return
+    let alive = true
+    supabase.from('products').select('id, name, unit, current_stock').order('name').limit(1000)
+      .then(({ data }) => { if (alive) setProducts((data ?? []) as ProductOption[]) }, () => {})
+    return () => { alive = false }
+  }, [open])
+  return products
+}
+
 export function MovementModal({ open, onClose, onSave, defaultType = 'entrada' }: MovementModalProps) {
-  const { register, handleSubmit, watch, reset, formState: { errors, isSubmitting } } = useForm<MovementFormData>({
+  const { register, handleSubmit, watch, reset, setError, formState: { errors, isSubmitting } } = useForm<MovementFormData>({
     resolver: zodResolver(schema),
     defaultValues: { type: defaultType, quantity: 1 },
   })
 
+  const products = useProductOptions(open)
   const currentType = watch('type') as MovementType
   const cfg = typeConfig[currentType] ?? typeConfig.entrada
   const Icon = cfg.icon
@@ -61,9 +84,22 @@ export function MovementModal({ open, onClose, onSave, defaultType = 'entrada' }
   }, [open, defaultType, reset])
 
   async function onSubmit(data: MovementFormData) {
-    await new Promise(r => setTimeout(r, 400))
-    onSave(data)
-    onClose()
+    const product = products.find(p => p.id === data.product_id)
+    const isAdjust = data.type === 'ajuste' || data.type === 'inventario'
+    if (!isAdjust && data.quantity < 1) {
+      setError('quantity', { message: 'Quantidade mínima: 1' })
+      return
+    }
+    if ((data.type === 'saida' || data.type === 'perda') && product && data.quantity > product.current_stock) {
+      setError('quantity', { message: `Estoque insuficiente (disponível: ${product.current_stock})` })
+      return
+    }
+    try {
+      await onSave(data)
+      onClose()
+    } catch {
+      // o erro já é exibido pelo onSave; mantém o modal aberto
+    }
   }
 
   if (!open) return null
@@ -109,7 +145,7 @@ export function MovementModal({ open, onClose, onSave, defaultType = 'entrada' }
             <Field label="Produto *" error={errors.product_id?.message}>
               <Select {...register('product_id')}>
                 <option value="">Selecione o produto...</option>
-                {mockProducts.map(p => (
+                {products.map(p => (
                   <option key={p.id} value={p.id}>
                     {p.name} — Estoque: {p.current_stock} {p.unit}
                   </option>
@@ -120,7 +156,7 @@ export function MovementModal({ open, onClose, onSave, defaultType = 'entrada' }
             <div className="grid grid-cols-2 gap-3">
               {/* Quantidade */}
               <Field label="Quantidade *" error={errors.quantity?.message}>
-                <Input type="number" min="1" placeholder="0" {...register('quantity')} />
+                <Input type="number" min="0" placeholder="0" {...register('quantity')} />
               </Field>
 
               {/* Custo unitário */}

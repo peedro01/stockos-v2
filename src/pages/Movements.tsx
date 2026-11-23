@@ -4,10 +4,10 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { MovementBadge } from '@/components/shared/StockBadge'
 import { MovementModal } from '@/components/movements/MovementModal'
-import { mockMovements, mockProducts } from '@/lib/mock-data'
+import { useMovements } from '@/hooks/use-movements'
 import { formatDateTime, formatNumber, cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
-import type { MovementType, MovementFormData, StockMovement } from '@/types'
+import type { MovementType, MovementFormData } from '@/types'
 
 const typeFilters: { key: MovementType | 'all'; label: string }[] = [
   { key: 'all', label: 'Todos' },
@@ -24,7 +24,7 @@ const typeLabels: Record<MovementType, string> = {
 
 export default function Movements() {
   const [activeType, setActiveType] = useState<MovementType | 'all'>('all')
-  const [movements, setMovements] = useState<StockMovement[]>(mockMovements)
+  const { movements, isLoading, createMovement } = useMovements()
   const [modalOpen, setModalOpen] = useState(false)
   const [defaultType, setDefaultType] = useState<MovementType>('entrada')
 
@@ -42,25 +42,15 @@ export default function Movements() {
     setModalOpen(true)
   }
 
-  function handleSave(data: MovementFormData) {
-    const product = mockProducts.find(p => p.id === data.product_id)
-    const newMovement: StockMovement = {
-      id: Math.random().toString(36).slice(2),
-      product_id: data.product_id,
-      product: product,
-      type: data.type,
-      quantity: data.quantity,
-      balance_after: 0,
-      unit_cost: data.unit_cost,
-      total_cost: data.unit_cost ? data.unit_cost * data.quantity : undefined,
-      reference: data.reference,
-      notes: data.notes,
-      user_id: 'u1',
-      company_id: '1',
-      created_at: new Date().toISOString(),
+  async function handleSave(data: MovementFormData) {
+    try {
+      const created = await createMovement(data)
+      toast({ title: `✓ ${typeLabels[data.type]} registrada`, description: 'Estoque atualizado', variant: 'success' })
+      return created
+    } catch (e: any) {
+      toast({ title: 'Erro ao registrar movimentação', description: e?.message ?? 'Tente novamente', variant: 'error' })
+      throw e
     }
-    setMovements(prev => [newMovement, ...prev])
-    toast({ title: `✓ ${typeLabels[data.type]} registrada`, description: product?.name ?? 'Produto', variant: 'success' })
   }
 
   return (
@@ -140,12 +130,15 @@ export default function Movements() {
                   </td>
                   <td className="px-3 sm:px-4 py-2.5 text-xs font-semibold">{formatNumber(m.balance_after)}</td>
                   <td className="px-3 sm:px-4 py-2.5 text-xs text-muted-foreground">
-                    {m.user_id === 'u1' ? 'João S.' : m.user_id === 'u2' ? 'Maria L.' : 'Pedro M.'}
+                    {(m as any).user?.full_name ?? (m.user_id === 'u1' ? 'João S.' : m.user_id === 'u2' ? 'Maria L.' : m.user_id === 'u3' ? 'Pedro M.' : '—')}
                   </td>
                   <td className="px-3 sm:px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(m.created_at)}</td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {isLoading && (
+                <tr><td colSpan={7} className="px-4 py-10 text-center text-xs text-muted-foreground">Carregando...</td></tr>
+              )}
+              {!isLoading && filtered.length === 0 && (
                 <tr><td colSpan={7} className="px-4 py-10 text-center text-xs text-muted-foreground">Nenhuma movimentação encontrada</td></tr>
               )}
             </tbody>
