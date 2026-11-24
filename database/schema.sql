@@ -16,6 +16,7 @@ create table public.companies (
   city       text,
   state      text,
   logo_url   text,
+  settings   jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -233,8 +234,11 @@ security definer
 set search_path = public
 as $$
 declare
-  v_old text;
-  v_new text;
+  v_old      text;
+  v_new      text;
+  v_settings jsonb;
+  v_low_on   boolean;
+  v_zero_on  boolean;
 begin
   v_new := case
     when new.current_stock <= 0 then 'zero'
@@ -256,10 +260,14 @@ begin
     return new;
   end if;
 
+  select settings into v_settings from public.companies where id = new.company_id;
+  v_low_on  := coalesce((v_settings -> 'notifications' ->> 'lowStock')::boolean, true);
+  v_zero_on := coalesce((v_settings -> 'notifications' ->> 'outOfStock')::boolean, true);
+
   delete from public.stock_alerts
   where product_id = new.id and type in ('out_of_stock', 'low_stock');
 
-  if v_new = 'zero' then
+  if v_new = 'zero' and v_zero_on then
     insert into public.stock_alerts (type, title, message, severity, product_id, company_id)
     values (
       'out_of_stock',
@@ -267,7 +275,7 @@ begin
       new.name || ' (' || new.sku || ') está sem estoque. Mínimo definido: ' || new.min_stock || ' ' || coalesce(new.unit, 'un') || '.',
       'danger', new.id, new.company_id
     );
-  elsif v_new = 'low' then
+  elsif v_new = 'low' and v_low_on then
     insert into public.stock_alerts (type, title, message, severity, product_id, company_id)
     values (
       'low_stock',
@@ -311,8 +319,14 @@ create policy "company_isolation" on public.customers        for all using (comp
 create policy "company_isolation" on public.products         for all using (company_id = public.my_company_id());
 create policy "company_isolation" on public.stock_movements  for all using (company_id = public.my_company_id());
 create policy "company_isolation" on public.stock_alerts     for all using (company_id = public.my_company_id());
-create policy "own_profile"       on public.user_profiles    for all using (company_id = public.my_company_id());
+create policy "profiles_select"   on public.user_profiles    for select using (company_id = public.my_company_id());
+create policy "profiles_admin_update" on public.user_profiles for update
+  using (company_id = public.my_company_id() and public.my_role() = 'admin')
+  with check (company_id = public.my_company_id() and public.my_role() = 'admin');
 create policy "own_company"       on public.companies        for select using (id = public.my_company_id());
+create policy "company_admin_update" on public.companies for update
+  using (id = public.my_company_id() and public.my_role() = 'admin')
+  with check (id = public.my_company_id() and public.my_role() = 'admin');
 
 create policy "admin_only_delete" on public.products for delete
   using (company_id = public.my_company_id() and public.my_role() in ('admin','gerente'));

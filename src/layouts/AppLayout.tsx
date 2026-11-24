@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/Header'
 import { ToastProvider, ToastViewport, Toast, ToastTitle, ToastDescription, ToastClose } from '@/components/ui/toast'
 import { useToastState } from '@/hooks/use-toast'
 import { useAlertsStore } from '@/store/alerts.store'
+import { useSettingsStore } from '@/store/settings.store'
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/dashboard': { title: 'Dashboard', subtitle: 'Visão geral' },
@@ -23,6 +24,9 @@ export function AppLayout() {
   const { toasts, dismiss } = useToastState()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const loadAlerts = useAlertsStore(s => s.load)
+  const loadSettings = useSettingsStore(s => s.load)
+
+  useEffect(() => { loadSettings() }, [loadSettings])
 
   // Alertas são gerados no banco: carrega ao entrar, ao voltar pra aba e a cada 60s
   useEffect(() => {

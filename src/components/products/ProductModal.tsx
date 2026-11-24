@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { mockCategories, mockSuppliers } from '@/lib/mock-data'
 import { supabase } from '@/lib/supabase'
+import { useSettingsStore, resolveSettings } from '@/store/settings.store'
 import type { Product, ProductFormData } from '@/types'
 
 const schema = z.object({
@@ -85,6 +86,7 @@ Select.displayName = 'Select'
 export function ProductModal({ open, onClose, onSave, product }: ProductModalProps) {
   const isEdit = !!product
   const { categories, suppliers } = useLookups(open)
+  const defaultUnit = useSettingsStore(st => resolveSettings(st.company).defaultUnit)
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ProductFormData>({
     resolver: zodResolver(schema),
@@ -118,9 +120,9 @@ export function ProductModal({ open, onClose, onSave, product }: ProductModalPro
         status: product.status,
       })
     } else {
-      reset({ unit: 'un', status: 'ativo', cost_price: 0, sale_price: 0, current_stock: 0, min_stock: 0 })
+      reset({ unit: defaultUnit as any, status: 'ativo', cost_price: 0, sale_price: 0, current_stock: 0, min_stock: 0 })
     }
-  }, [product, reset, categories.length, suppliers.length])
+  }, [product, reset, categories.length, suppliers.length, defaultUnit])
 
   async function onSubmit(data: ProductFormData) {
     await new Promise(r => setTimeout(r, 400))
