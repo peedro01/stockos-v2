@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Filter, Download, Upload, Pencil, Eye, Trash2, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { StockBadge, StockBar } from '@/components/shared/StockBadge'
 import { ProductModal } from '@/components/products/ProductModal'
 import { ImportProductsModal } from '@/components/products/ImportProductsModal'
+import { exportProducts, exportProductsCsv } from '@/lib/export'
 import { DeleteConfirmModal } from '@/components/products/DeleteConfirmModal'
 import { useProducts } from '@/hooks/use-products'
 import { formatCurrency, formatNumber, getStockStatus, cn } from '@/lib/utils'
@@ -23,6 +24,15 @@ export default function Products() {
   const navigate = useNavigate()
   const { products, isLoading, createProduct, updateProduct, deleteProduct, refetch } = useProducts()
   const [importOpen, setImportOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const exportRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!exportOpen) return
+    const close = (e: MouseEvent) => { if (!exportRef.current?.contains(e.target as Node)) setExportOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [exportOpen])
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState('all')
   const [modalOpen, setModalOpen] = useState(false)
@@ -61,6 +71,21 @@ export default function Products() {
     }
   }
 
+  async function handleExport(format: 'xlsx' | 'csv' | 'pdf') {
+    setExportOpen(false)
+    if (filtered.length === 0) {
+      toast({ title: 'Nada para exportar', description: 'Nenhum produto na lista atual', variant: 'error' })
+      return
+    }
+    try {
+      if (format === 'csv') exportProductsCsv(filtered)
+      else await exportProducts(filtered, format === 'xlsx' ? 'excel' : 'pdf')
+      toast({ title: '✓ Exportação concluída', description: `${filtered.length} produto(s)`, variant: 'success' })
+    } catch (e: any) {
+      toast({ title: 'Erro ao exportar', description: e?.message ?? 'Tente novamente', variant: 'error' })
+    }
+  }
+
   async function handleConfirmDelete() {
     if (!productToDelete) return
     try {
@@ -85,7 +110,24 @@ export default function Products() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" className="text-xs" onClick={() => setImportOpen(true)}><Upload className="h-3.5 w-3.5" /><span className="hidden sm:inline">Importar</span> CSV</Button>
-          <Button variant="outline" size="sm" className="text-xs"><Download className="h-3.5 w-3.5" /><span className="hidden sm:inline">Exportar</span></Button>
+          <div className="relative" ref={exportRef}>
+            <Button variant="outline" size="sm" className="text-xs" onClick={() => setExportOpen(o => !o)}>
+              <Download className="h-3.5 w-3.5" /><span className="hidden sm:inline">Exportar</span>
+            </Button>
+            {exportOpen && (
+              <div className="absolute right-0 z-20 mt-1 w-60 overflow-hidden rounded-lg border border-border bg-card shadow-xl">
+                <p className="border-b border-border px-3 py-2 text-[10px] text-muted-foreground">Exporta os {filtered.length} produtos da lista atual</p>
+                {[
+                  { key: 'xlsx', label: 'Planilha Excel (.xlsx)' },
+                  { key: 'csv', label: 'CSV (pode ser importado de volta)' },
+                  { key: 'pdf', label: 'PDF' },
+                ].map(o => (
+                  <button key={o.key} onClick={() => handleExport(o.key as 'xlsx' | 'csv' | 'pdf')}
+                    className="block w-full px-3 py-2 text-left text-xs hover:bg-secondary">{o.label}</button>
+                ))}
+              </div>
+            )}
+          </div>
           <Button size="sm" className="text-xs" onClick={() => { setSelectedProduct(null); setModalOpen(true) }}>
             <Plus className="h-3.5 w-3.5" /><span className="hidden sm:inline">Novo</span> produto
           </Button>

@@ -95,6 +95,36 @@ export async function exportProducts(products: Product[], format: 'excel' | 'pdf
   }
 }
 
+// ─── CSV (mesmo formato da importação de produtos) ────────────────────────────
+const CSV_HEADER = ['nome', 'sku', 'categoria', 'fornecedor', 'unidade', 'custo', 'venda', 'estoque', 'minimo', 'maximo', 'codigo_barras', 'marca', 'localizacao', 'descricao', 'status']
+
+// Texto que começa com = + - @ vira fórmula ao abrir no Excel; o apóstrofo neutraliza.
+const safeText = (v: string) => (/^[=+\-@\t\r]/.test(v) ? `'${v}` : v)
+const csvCell = (v: string) => (/[;"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)
+const csvNum = (n: number | null | undefined) => (n === null || n === undefined ? '' : String(n).replace('.', ','))
+
+export function productsToCsv(products: Product[]): string {
+  const lines = [CSV_HEADER.join(';')]
+  for (const p of products) {
+    lines.push([
+      safeText(p.name), safeText(p.sku), safeText(p.category?.name ?? ''), safeText(p.supplier?.company_name ?? ''),
+      p.unit, csvNum(p.cost_price), csvNum(p.sale_price), csvNum(p.current_stock), csvNum(p.min_stock), csvNum(p.max_stock),
+      safeText(p.barcode ?? ''), safeText(p.brand ?? ''), safeText(p.location ?? ''), safeText(p.description ?? ''), p.status,
+    ].map(c => csvCell(String(c))).join(';'))
+  }
+  return lines.join('\r\n') + '\r\n'
+}
+
+export function exportProductsCsv(products: Product[]) {
+  const blob = new Blob(['\uFEFF' + productsToCsv(products)], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `produtos_${new Date().toISOString().split('T')[0]}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 // ─── MOVIMENTAÇÕES ────────────────────────────────────────────────────────────
 export async function exportMovements(movements: StockMovement[], format: 'excel' | 'pdf') {
   const typeLabels: Record<string, string> = {
