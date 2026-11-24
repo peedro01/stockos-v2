@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StockBadge, StockBar } from '@/components/shared/StockBadge'
 import { ProductModal } from '@/components/products/ProductModal'
+import { ImportProductsModal } from '@/components/products/ImportProductsModal'
 import { DeleteConfirmModal } from '@/components/products/DeleteConfirmModal'
 import { useProducts } from '@/hooks/use-products'
 import { formatCurrency, formatNumber, getStockStatus, cn } from '@/lib/utils'
@@ -20,7 +21,8 @@ const tabs = [
 
 export default function Products() {
   const navigate = useNavigate()
-  const { products, isLoading, createProduct, updateProduct, deleteProduct } = useProducts()
+  const { products, isLoading, createProduct, updateProduct, deleteProduct, refetch } = useProducts()
+  const [importOpen, setImportOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState('all')
   const [modalOpen, setModalOpen] = useState(false)
@@ -82,7 +84,7 @@ export default function Products() {
           ))}
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" className="text-xs"><Upload className="h-3.5 w-3.5" /><span className="hidden sm:inline">Importar</span> CSV</Button>
+          <Button variant="outline" size="sm" className="text-xs" onClick={() => setImportOpen(true)}><Upload className="h-3.5 w-3.5" /><span className="hidden sm:inline">Importar</span> CSV</Button>
           <Button variant="outline" size="sm" className="text-xs"><Download className="h-3.5 w-3.5" /><span className="hidden sm:inline">Exportar</span></Button>
           <Button size="sm" className="text-xs" onClick={() => { setSelectedProduct(null); setModalOpen(true) }}>
             <Plus className="h-3.5 w-3.5" /><span className="hidden sm:inline">Novo</span> produto
@@ -162,6 +164,8 @@ export default function Products() {
         </div>
       </Card>
 
+      <ImportProductsModal open={importOpen} onClose={() => setImportOpen(false)} onDone={() => { void refetch() }}
+        existingProducts={products} onDemoCreate={d => createProduct(d)} />
       <ProductModal open={modalOpen} onClose={() => setModalOpen(false)} onSave={handleSave} product={selectedProduct} />
       <DeleteConfirmModal open={deleteModalOpen} product={productToDelete} onClose={() => setDeleteModalOpen(false)} onConfirm={handleConfirmDelete} />
     </div>
