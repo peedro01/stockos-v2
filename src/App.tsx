@@ -7,6 +7,7 @@ import { AppLayout } from './layouts/AppLayout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Products from './pages/Products'
+import ProductDetail from './pages/ProductDetail'
 import Movements from './pages/Movements'
 import Suppliers from './pages/Suppliers'
 import Customers from './pages/Customers'
@@ -52,6 +53,7 @@ export default function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="products" element={<Products />} />
+            <Route path="products/:id" element={<ProductDetail />} />
             <Route path="movements" element={<Movements />} />
             <Route path="suppliers" element={<Suppliers />} />
             <Route path="customers" element={<Customers />} />

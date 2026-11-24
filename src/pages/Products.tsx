@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Filter, Download, Upload, Pencil, Eye, Trash2, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,7 @@ const tabs = [
 ]
 
 export default function Products() {
+  const navigate = useNavigate()
   const { products, isLoading, createProduct, updateProduct, deleteProduct } = useProducts()
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState('all')
@@ -119,7 +121,7 @@ export default function Products() {
                   return (
                     <tr key={p.id} className="border-b border-border/30 hover:bg-secondary/30 transition-colors">
                       <td className="px-3 sm:px-4 py-2.5">
-                        <div className="text-xs font-semibold max-w-[140px] sm:max-w-[200px] truncate">{p.name}</div>
+                        <button onClick={() => navigate(`/products/${p.id}`)} className="block text-left text-xs font-semibold max-w-[140px] sm:max-w-[200px] truncate hover:text-primary">{p.name}</button>
                         <div className="text-[10px] text-muted-foreground truncate">{p.supplier?.company_name ?? p.brand ?? '—'}</div>
                       </td>
                       <td className="px-3 sm:px-4 py-2.5">
@@ -138,7 +140,8 @@ export default function Products() {
                         <div className="flex gap-1">
                           <button onClick={() => { setSelectedProduct(p); setModalOpen(true) }}
                             className="flex h-6 w-6 items-center justify-center rounded border border-border text-muted-foreground hover:text-primary"><Pencil className="h-3 w-3" /></button>
-                          <button className="flex h-6 w-6 items-center justify-center rounded border border-border text-muted-foreground hover:text-foreground"><Eye className="h-3 w-3" /></button>
+                          <button onClick={() => navigate(`/products/${p.id}`)} title="Ver detalhes"
+                            className="flex h-6 w-6 items-center justify-center rounded border border-border text-muted-foreground hover:text-foreground"><Eye className="h-3 w-3" /></button>
                           <button onClick={() => { setProductToDelete(p); setDeleteModalOpen(true) }}
                             className="flex h-6 w-6 items-center justify-center rounded border border-border text-muted-foreground hover:text-red-400"><Trash2 className="h-3 w-3" /></button>
                         </div>

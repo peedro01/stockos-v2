@@ -20,7 +20,8 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
 
 export function AppLayout() {
   const location = useLocation()
-  const page = pageTitles[location.pathname] ?? { title: 'StockOS', subtitle: '' }
+  const page = pageTitles[location.pathname]
+    ?? (location.pathname.startsWith('/products/') ? { title: 'Produto', subtitle: 'Detalhes e histórico' } : { title: 'StockOS', subtitle: '' })
   const { toasts, dismiss } = useToastState()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const loadAlerts = useAlertsStore(s => s.load)
