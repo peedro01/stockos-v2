@@ -9,6 +9,9 @@ import { ImportProductsModal } from '@/components/products/ImportProductsModal'
 import { exportProducts, exportProductsCsv } from '@/lib/export'
 import { DeleteConfirmModal } from '@/components/products/DeleteConfirmModal'
 import { useProducts } from '@/hooks/use-products'
+import { useProductFilters } from '@/hooks/use-product-filters'
+import { ProductFilterPanel } from '@/components/products/ProductFilterPanel'
+import { applyFilters, activeAdvancedCount } from '@/lib/product-filters'
 import { formatCurrency, formatNumber, getStockStatus, cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
 import type { Product, ProductFormData } from '@/types'
@@ -33,29 +36,23 @@ export default function Products() {
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
   }, [exportOpen])
-  const [search, setSearch] = useState('')
-  const [activeTab, setActiveTab] = useState('all')
+  const { filters, update, clearAdvanced, clearAll } = useProductFilters()
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
 
-  const filtered = useMemo(() => products.filter(p => {
-    const ss = getStockStatus(p.current_stock, p.min_stock)
-    if (activeTab !== 'all' && ss !== activeTab) return false
-    if (search) {
-      const q = search.toLowerCase()
-      return p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
-    }
-    return true
-  }), [products, search, activeTab])
+  const filtered = useMemo(() => applyFilters(products, filters), [products, filters])
 
-  const counts = useMemo(() => ({
-    all: products.length,
-    ok: products.filter(p => getStockStatus(p.current_stock, p.min_stock) === 'ok').length,
-    low: products.filter(p => getStockStatus(p.current_stock, p.min_stock) === 'low').length,
-    out: products.filter(p => getStockStatus(p.current_stock, p.min_stock) === 'out').length,
-  }), [products])
+  // contagem das abas respeita os demais filtros (busca, categoria, preço...)
+  const counts = useMemo(() => {
+    const base = applyFilters(products, { ...filters, tab: 'all' })
+    const by = (t: 'ok' | 'low' | 'out') => base.filter(p => getStockStatus(p.current_stock, p.min_stock) === t).length
+    return { all: base.length, ok: by('ok'), low: by('low'), out: by('out') }
+  }, [products, filters])
+
+  const advancedCount = activeAdvancedCount(filters)
 
   async function handleSave(data: ProductFormData) {
     try {
@@ -101,9 +98,9 @@ export default function Products() {
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
         <div className="flex rounded-lg border border-border bg-secondary p-1 gap-1 overflow-x-auto">
           {tabs.map(t => (
-            <button key={t.key} onClick={() => setActiveTab(t.key)}
+            <button key={t.key} onClick={() => update({ tab: t.key as typeof filters.tab })}
               className={cn('rounded-md px-2.5 py-1 text-xs font-medium transition-colors whitespace-nowrap',
-                activeTab === t.key ? 'bg-card text-foreground border border-border' : 'text-muted-foreground hover:text-foreground')}>
+                filters.tab === t.key ? 'bg-card text-foreground border border-border' : 'text-muted-foreground hover:text-foreground')}>
               {t.label} ({counts[t.key as keyof typeof counts]})
             </button>
           ))}
@@ -138,12 +135,18 @@ export default function Products() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 border-b border-border px-3 sm:px-4 py-3">
           <div className="flex flex-1 w-full items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-1.5">
             <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar por nome, SKU..."
+            <input value={filters.q} onChange={e => update({ q: e.target.value })}
+              placeholder="Buscar por nome, SKU, marca..."
               className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground" />
           </div>
-          <Button variant="outline" size="sm" className="text-xs"><Filter className="h-3.5 w-3.5" />Filtros</Button>
+          <Button variant={advancedCount > 0 || filtersOpen ? 'default' : 'outline'} size="sm" className="text-xs" onClick={() => setFiltersOpen(o => !o)}>
+            <Filter className="h-3.5 w-3.5" />Filtros{advancedCount > 0 && <span className="ml-1 rounded-full bg-white/25 px-1.5 text-[10px]">{advancedCount}</span>}
+          </Button>
         </div>
+
+        {filtersOpen && (
+          <ProductFilterPanel products={products} filters={filters} onChange={update} onClear={clearAdvanced} />
+        )}
 
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
@@ -194,7 +197,12 @@ export default function Products() {
                   )
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-10 text-center text-xs text-muted-foreground">Nenhum produto encontrado</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-10 text-center text-xs text-muted-foreground">
+                    Nenhum produto encontrado
+                    {(products.length > 0) && (
+                      <div className="mt-2"><button onClick={clearAll} className="text-primary hover:underline">Limpar todos os filtros</button></div>
+                    )}
+                  </td></tr>
                 )}
               </tbody>
             </table>
